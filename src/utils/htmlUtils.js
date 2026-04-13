@@ -91,18 +91,33 @@ export function fileToBase64(file) {
 }
 
 export async function urlToBase64(imageUrl) {
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(imageUrl)}`;
-  const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok)
-    throw new Error(
-      "Could not fetch image URL. Download the image and upload it instead."
-    );
-  const blob = await res.blob();
-  const mimeType = blob.type || "image/jpeg";
-  const base64 = await new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(",")[1]);
-    reader.readAsDataURL(blob);
-  });
-  return { base64, mimeType };
+  const proxies = [
+    imageUrl, // Try direct first (works for permissive CORS like Unsplash)
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(imageUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(imageUrl)}`,
+  ];
+
+  for (const url of proxies) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (res.ok) {
+        const blob = await res.blob();
+        const mimeType = blob.type || "image/jpeg";
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        return { base64, mimeType };
+      }
+    } catch (e) {
+      // Ignore error and try the next proxy
+      console.warn(`Failed to fetch image from ${url}:`, e);
+    }
+  }
+
+  throw new Error(
+    "Could not fetch image URL. Download the image and upload it instead."
+  );
 }
