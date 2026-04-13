@@ -36,3 +36,6 @@ FlowState.ai is a landing page personalization engine that automatically aligns 
 Currently running as a Vite project.
 - `npm run dev` - Start local development server
 - `npm run build` - Create production build
+
+
+URL: https://flowstate-ai-kappa.vercel.app/
