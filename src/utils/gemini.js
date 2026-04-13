@@ -18,13 +18,6 @@ export async function callGemini(apiKey, parts, maxOutputTokens = 8192) {
     }),
   });
 
-  // Handle rate limiting - Gemini free tier is 15 RPM
-  if (res.status === 429) {
-    throw new Error(
-      "Rate limit hit (Gemini free tier: 15 requests/min). Wait 30 seconds and try again."
-    );
-  }
-
   if (!res.ok) {
     let errMsg = `Gemini API error ${res.status}`;
     try {
@@ -33,6 +26,12 @@ export async function callGemini(apiKey, parts, maxOutputTokens = 8192) {
     } catch {
       // ignore JSON parse error
     }
+    
+    // Add context if it's a 429 error
+    if (res.status === 429) {
+      throw new Error(`Rate limit hit: ${errMsg}. If you're on the free tier, wait 30-60 seconds and try again.`);
+    }
+
     throw new Error(errMsg);
   }
 
